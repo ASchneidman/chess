@@ -4,6 +4,7 @@ const KNIGHT: &str = "knight";
 const BISHOP: &str = "bishop";
 const QUEEN: &str = "queen_";
 const KING: &str = "king__";
+const EMPTY: &str = "______";
 
 fn print_state(values: &mut Vec<Vec<&str>>) {
     for x in 0..8 {
@@ -12,6 +13,13 @@ fn print_state(values: &mut Vec<Vec<&str>>) {
         }
         println!();
     }
+}
+
+fn move_piece(values: &mut Vec<Vec<&str>>, piece: Vec<usize>, destination: Vec<usize>) {
+    // piece and destination have 2 values
+    let name = values[piece[0]][piece[1]];
+    values[destination[0]][destination[1]] = name;
+    values[piece[0]][piece[1]] = EMPTY;
 }
 
 fn main() {
@@ -40,6 +48,12 @@ fn main() {
             values[i][5] = BISHOP;
         }
     }
+
+    print_state(&mut values);
+
+    move_piece(&mut values, vec![1, 0], vec![2, 0]);
+
+    println!("\n");
 
     print_state(&mut values);
 }
