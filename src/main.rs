@@ -1,3 +1,5 @@
+use std::io::{self, BufRead};
+
 const PAWN: &str = "pawn__";
 const ROOK: &str = "rook__";
 const KNIGHT: &str = "knight";
@@ -17,9 +19,38 @@ fn print_state(values: &mut Vec<Vec<&str>>) {
 
 fn move_piece(values: &mut Vec<Vec<&str>>, piece: Vec<usize>, destination: Vec<usize>) {
     // piece and destination have 2 values
+    if piece.len() != 2 || piece[0] >= 8 || piece[1] >= 8 {
+        println!("Invalid start piece: {:?}", piece);
+        return;
+    }
+    if destination.len() != 2 || destination[0] >= 8 || destination[1] >= 8 {
+        println!("Invalid destination: {:?}", destination);
+        return;
+    }
+    if values[piece[0]][piece[1]] == EMPTY {
+        println!("Piece {}, {} is empty.", piece[0], piece[1]);
+        return;
+    }
+    if values[destination[0]][destination[1]] != EMPTY {
+        println!("Destination {}, {} is not empty.", destination[0], destination[1]);
+        return;
+    }
+
     let name = values[piece[0]][piece[1]];
     values[destination[0]][destination[1]] = name;
     values[piece[0]][piece[1]] = EMPTY;
+}
+
+fn parse_input() -> Option<Vec<usize>> {
+    let mut line = String::new();
+    let stdin = io::stdin();
+    stdin.lock().read_line(&mut line).unwrap();
+
+    let mut others = line.split(",");
+    let first = others.next()?;
+    let second = others.next()?;
+
+    return vec![first.parse().ok(), second.parse().ok()];
 }
 
 fn main() {
@@ -49,11 +80,29 @@ fn main() {
         }
     }
 
-    print_state(&mut values);
+    while true {
+        print_state(&mut values);
+
+        let mut line = String::new();
+        let stdin = io::stdin();
+        stdin.lock().read_line(&mut line).unwrap();
+
+        let mut others = line.split(",");
+        let first = others.next();
+        let second = others.next();
+
+        println!("{:?}, {:?}", first, second);
+    }
+
 
     move_piece(&mut values, vec![1, 0], vec![2, 0]);
 
     println!("\n");
 
     print_state(&mut values);
+
+    move_piece(&mut values, vec![2,0], vec![6,6]);
+
+    print_state(&mut values);
+
 }
