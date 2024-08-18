@@ -42,15 +42,34 @@ fn move_piece(values: &mut Vec<Vec<&str>>, piece: Vec<usize>, destination: Vec<u
 }
 
 fn parse_input() -> Option<Vec<usize>> {
-    let mut line = String::new();
-    let stdin = io::stdin();
-    stdin.lock().read_line(&mut line).unwrap();
+    let mut numbers = String::new();
 
-    let mut others = line.split(",");
-    let first = others.next()?;
-    let second = others.next()?;
-
-    return vec![first.parse().ok(), second.parse().ok()];
+    let raw = io::stdin()
+        .read_line(&mut numbers)
+        .ok();
+    let mut result: Vec<usize> = vec![];
+    match raw {
+        None => return None,
+        Some(_) => {
+            let mut iter = numbers.split_whitespace();
+            for _ in 0..4 {
+                let x = iter.next();
+                match x {
+                    None => return None,
+                    Some(y) => {
+                        let maybe_usize: Option<usize> = y.parse().ok();
+                        match maybe_usize {
+                            None => return None,
+                            Some(val) => { 
+                                result.push(val);
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    }
+    return Some(result);
 }
 
 fn main() {
@@ -82,27 +101,12 @@ fn main() {
 
     while true {
         print_state(&mut values);
-
-        let mut line = String::new();
-        let stdin = io::stdin();
-        stdin.lock().read_line(&mut line).unwrap();
-
-        let mut others = line.split(",");
-        let first = others.next();
-        let second = others.next();
-
-        println!("{:?}, {:?}", first, second);
+        let maybe_movement = parse_input();
+        match maybe_movement {
+            None => continue,
+            Some(movement) => {
+                move_piece(&mut values, vec![movement[0], movement[1]], vec![movement[2], movement[3]]);
+            }
+        }
     }
-
-
-    move_piece(&mut values, vec![1, 0], vec![2, 0]);
-
-    println!("\n");
-
-    print_state(&mut values);
-
-    move_piece(&mut values, vec![2,0], vec![6,6]);
-
-    print_state(&mut values);
-
 }
