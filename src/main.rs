@@ -9,7 +9,7 @@ const QUEEN: &str = "queen ";
 const KING: &str = "king  ";
 const EMPTY: &str = "      ";
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum Side { White, Black }
 
 #[derive(Debug)]
@@ -59,7 +59,7 @@ fn print_board(pieces: &Vec<Piece>) {
     }
 }
 
-fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>) {
+fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>, turn: Side) -> bool {
     fn move_piece_to_dest(piece_index: usize, pieces: &mut Vec<Piece>, destination: &Vec<usize>) {
         pieces[piece_index].position = vec![destination[0], destination[1]];
         pieces[piece_index].times_moved += 1;
@@ -68,7 +68,7 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
     // Check that the requested destination position is somewhat correct
     if destination.len() != 2 || destination[0] >= 8 || destination[1] >= 8 {
         println!("Invalid destination: {:?}", destination);
-        return;
+        return false;
     }
 
     let maybe_piece = position_to_piece(&pieces, &requested_piece);
@@ -77,59 +77,66 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
     match maybe_piece {
         None => {
             println!("Invalid requested piece: ({}, {})", requested_piece[0], requested_piece[1]);
-            return;
+            return false;
         },
         Some(piece_index) => {
             // Evaluate the requested destination based on the piece type
-            let mut piece = &pieces[piece_index];
+            let piece = &pieces[piece_index];
+            if piece.side != turn {
+                println!("Not the turn for the requested piece. It is {:?} turn.", turn);
+                return false;
+            }
             match piece.typ {
                 PAWN => {
                     // If first move for the pawn, it can move one or two forward. Otherwise, only one forward. Or can capture diagonal left or right. 
                     // Check player side. White can only go up, Black can only go down.
-                    // Exercise, start with just black
-                    if piece.side == Side::Black { 
-                        if destination[0] <= piece.position[0] {
-                            println!("Black requested moving pawn down or sideways, so incorrect. Piece {:?}, Requested destination {:?}", piece.position, destination);
-                            return;
+                    if (piece.side == Side::Black && destination[0] <= piece.position[0]) || (piece.side == Side::White && destination[0] >= piece.position[0]) {
+                        println!("Requested moving pawn wrong direction, so incorrect. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                        return false;
+                    }
+                    // Check if trying to move down or diagonal
+                    if destination[1] == piece.position[1] {
+                        // Trying to move down
+                        // If first move, it can move one or two. Otherwise, only one
+                        // let amt_wanting_to_move = destination[0] - piece.position[0];
+                        let amt_wanting_to_move: usize;
+                        if piece.side == Side::Black {
+                            amt_wanting_to_move = destination[0] - piece.position[0];
+                        } else {
+                            amt_wanting_to_move = piece.position[0] - destination[0];
                         }
-                        // Check if trying to move down or diagonal
-                        if destination[1] == piece.position[1] {
-                            // Trying to move down
-                            // If first move, it can move one or two. Otherwise, only one
-                            let amt_wanting_to_move = destination[0] - piece.position[0];
-                            let mut good_movement: bool = false;
-                            if amt_wanting_to_move == 2 && piece.times_moved == 0 {
-                                good_movement = true;
-                            } else if amt_wanting_to_move == 1 {
-                                good_movement = true;
-                            } else {
-                                good_movement = false;
-                            }
-                            if good_movement == false {
-                                // Not allowed...
-                                println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
-                                return;
-                            }
-                            // Allowed!
-                            // Check destination is empty
-                            if maybe_piece_at_destination.is_none() {
-                                // Good to go!
-                                move_piece_to_dest(piece_index, &mut pieces, &destination);
-                                return;
-                            }
+                        let mut good_movement: bool = false;
+                        if amt_wanting_to_move == 2 && piece.times_moved == 0 {
+                            good_movement = true;
+                        } else if amt_wanting_to_move == 1 {
+                            good_movement = true;
+                        } else {
+                            good_movement = false;
+                        }
+                        if good_movement == false {
+                            // Not allowed...
                             println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
-                            return;
+                            return false;
                         }
+                        // Allowed!
+                        // Check destination is empty
+                        if maybe_piece_at_destination.is_none() {
+                            // Good to go!
+                            move_piece_to_dest(piece_index, &mut pieces, &destination);
+                            return true;
+                        }
+                        println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                        return false; 
                     }
                 },
                 _ => {
                     // Won't happen
-                    return;
+                    return false;
                 }
             }
-
         }
     }
+    return false;
 }
 
 fn parse_input() -> Option<Vec<usize>> {
@@ -224,13 +231,21 @@ fn main() {
         }
     }
 
+    let mut turn = Side::White;
     loop {
         print_board(&pieces);
         let maybe_movement = parse_input();
         match maybe_movement {
             None => continue,
             Some(movement) => {
-                move_piece(&mut pieces, vec![movement[0], movement[1]], vec![movement[2], movement[3]]);
+                if move_piece(&mut pieces, vec![movement[0], movement[1]], vec![movement[2], movement[3]], turn.clone()) == true {
+                    // Move was successful, switch turn to other player
+                    if turn == Side::White {
+                        turn = Side::Black;
+                    } else {
+                        turn = Side::White;
+                    }
+                }
             }
         }
     }
