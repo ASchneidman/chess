@@ -1,12 +1,13 @@
-use std::{default, io::{self, BufRead}};
+use std::io::{self, BufRead};
+use inline_colorization::*;
 
-const PAWN: &str = "pawn__";
-const ROOK: &str = "rook__";
+const PAWN: &str = "pawn  ";
+const ROOK: &str = "rook  ";
 const KNIGHT: &str = "knight";
 const BISHOP: &str = "bishop";
-const QUEEN: &str = "queen_";
-const KING: &str = "king__";
-const EMPTY: &str = "______";
+const QUEEN: &str = "queen ";
+const KING: &str = "king  ";
+const EMPTY: &str = "      ";
 
 #[derive(Debug, PartialEq, Eq)]
 enum Side { White, Black }
@@ -31,15 +32,26 @@ fn position_to_piece(pieces: &Vec<Piece>, position: &Vec<usize>) -> Option<usize
 }
 
 fn print_board(pieces: &Vec<Piece>) {
-    println!("   0      1      2      3      4      5      6      7");
+    print!("{style_bold}");
+    println!("   0     1     2     3     4     5     6     7");
     for x in 0..8 {
-        print!("{}: ", x);
+        print!("{}  ", x);
         for y in 0..8 {
             let pos: Vec<usize> = vec![x, y];
+            if x % 2 == 0 && y % 2 == 0 {
+                print!("{bg_white}");
+            } else if x % 2 == 1 && y % 2 == 1 {
+                print!("{bg_white}");
+            }
             match position_to_piece(&pieces, &pos) {
-                None => print!("{} ", EMPTY),
+                None => print!("{}{bg_reset}", EMPTY),
                 Some(piece_index) => {
-                    print!("{} ", pieces[piece_index].typ);
+                    if pieces[piece_index].side == Side::Black {
+                        print!("{color_bright_red}");
+                    } else {
+                        print!("{color_bright_white}");
+                    }
+                    print!("{}{color_reset}{bg_reset}", pieces[piece_index].typ);
                 }
             }
         }
