@@ -8,8 +8,10 @@ const QUEEN: &str = "queen_";
 const KING: &str = "king__";
 const EMPTY: &str = "______";
 
+#[derive(Debug, PartialEq, Eq)]
 enum Side { White, Black }
 
+#[derive(Debug)]
 struct Piece<'a> {
     pub typ: &'a str,
     pub position: Vec<usize>,
@@ -28,23 +30,40 @@ fn position_to_piece(pieces: &Vec<Piece>, position: &Vec<usize>) -> Option<usize
     return None;
 }
 
-fn print_state(values: &mut Vec<Vec<&str>>) {
+fn print_board(pieces: &Vec<Piece>) {
+    println!("   0      1      2      3      4      5      6      7");
     for x in 0..8 {
+        print!("{}: ", x);
         for y in 0..8 {
-            print!("{} ", values[x][y]);
+            let pos: Vec<usize> = vec![x, y];
+            match position_to_piece(&pieces, &pos) {
+                None => print!("{} ", EMPTY),
+                Some(piece_index) => {
+                    print!("{} ", pieces[piece_index].typ);
+                }
+            }
         }
         println!();
     }
 }
 
-fn move_piece(board: &mut Vec<Vec<&str>>, mut pieces: &Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>) {
+fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>) {
+    fn move_piece_to_dest(piece_index: usize, mut pieces: &mut Vec<Piece>, destination: &Vec<usize>) {
+        // let mut piece = &pieces[piece_index];
+        // let old_location = vec![piece.position[0], piece.position[1]];
+        pieces[piece_index].position = vec![destination[0], destination[1]];
+        pieces[piece_index].times_moved += 1;
+    }
+
     // Check that the requested destination position is somewhat correct
     if destination.len() != 2 || destination[0] >= 8 || destination[1] >= 8 {
         println!("Invalid destination: {:?}", destination);
         return;
     }
 
-    let maybe_piece = position_to_piece(&mut pieces, &requested_piece);
+    let maybe_piece = position_to_piece(&pieces, &requested_piece);
+    // Could be EMPTY (None), or another piece
+    let maybe_piece_at_destination = position_to_piece(&pieces, &destination);
     match maybe_piece {
         None => {
             println!("Invalid requested piece: ({}, {})", requested_piece[0], requested_piece[1]);
@@ -56,10 +75,42 @@ fn move_piece(board: &mut Vec<Vec<&str>>, mut pieces: &Vec<Piece>, requested_pie
             match piece.typ {
                 PAWN => {
                     // If first move for the pawn, it can move one or two forward. Otherwise, only one forward. Or can capture diagonal left or right. 
-                    // Check if trying to move upward/downward or diagonal
-                    if piece.position[1] == destination[1] {
-                        // This means it is a forward/downward move
-                    } 
+                    // Check player side. White can only go up, Black can only go down.
+                    // Exercise, start with just black
+                    if piece.side == Side::Black { 
+                        if destination[0] <= piece.position[0] {
+                            println!("Black requested moving pawn down or sideways, so incorrect. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                            return;
+                        }
+                        // Check if trying to move down or diagonal
+                        if destination[1] == piece.position[1] {
+                            // Trying to move down
+                            // If first move, it can move one or two. Otherwise, only one
+                            let amt_wanting_to_move = destination[0] - piece.position[0];
+                            let mut good_movement: bool = false;
+                            if amt_wanting_to_move == 2 && piece.times_moved == 0 {
+                                good_movement = true;
+                            } else if amt_wanting_to_move == 1 {
+                                good_movement = true;
+                            } else {
+                                good_movement = false;
+                            }
+                            if good_movement == false {
+                                // Not allowed...
+                                println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                                return;
+                            }
+                            // Allowed!
+                            // Check destination is empty
+                            if maybe_piece_at_destination.is_none() {
+                                // Good to go!
+                                move_piece_to_dest(piece_index, &mut pieces, &destination);
+                                return;
+                            }
+                            println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                            return;
+                        }
+                    }
                 },
                 _ => {
                     // Won't happen
@@ -69,33 +120,6 @@ fn move_piece(board: &mut Vec<Vec<&str>>, mut pieces: &Vec<Piece>, requested_pie
 
         }
     }
-
-    // piece and destination have 2 values
-    /*
-    if requested_piece.len() != 2 || requested_piece[0] >= 8 || requested_piece[1] >= 8 {
-        println!("Invalid start piece: {:?}", piece);
-        return;
-    }
-    if destination.len() != 2 || destination[0] >= 8 || destination[1] >= 8 {
-        println!("Invalid destination: {:?}", destination);
-        return;
-    }
-    if values[piece[0]][piece[1]] == EMPTY {
-        println!("Piece {}, {} is empty.", piece[0], piece[1]);
-        return;
-    }
-    if values[destination[0]][destination[1]] != EMPTY {
-        println!("Destination {}, {} is not empty: {}.", destination[0], destination[1], values[destination[0]][destination[1]]);
-        return;
-    }
-    
-    let name = values[piece[0]][piece[1]];
-    let destination_name = values[destination[0]][destination[1]];
-
-    
-    values[destination[0]][destination[1]] = name;
-    values[piece[0]][piece[1]] = EMPTY;
-    */
 }
 
 fn parse_input() -> Option<Vec<usize>> {
@@ -130,17 +154,12 @@ fn parse_input() -> Option<Vec<usize>> {
 }
 
 fn main() {
-    // pawn, rook, knight, bishop, queen, king
-    // 6 is the largest name, so everything needs to be 6
-    let mut board = vec![vec!["______"; 8]; 8];
     let mut pieces: Vec<Piece<'_>> = vec![];
 
-    // 8 is excluded
     for i in 0..8 {
         // populate pawns
         if i == 1 || i == 6 {
             for j in 0..8 {
-                board[i][j] = PAWN;
                 match i {
                     1 => {
                         let new_piece = Piece {
@@ -167,20 +186,9 @@ fn main() {
             }
         }
         if i == 0 || i == 7 {
-            board[i][0] = ROOK;
-            board[i][1] = KNIGHT;
-            board[i][2] = BISHOP;
-
-            board[i][3] = QUEEN;
-            board[i][4] = KING;
-
-            board[i][7] = ROOK;
-            board[i][6] = KNIGHT;
-            board[i][5] = BISHOP;
-
             for piece_typ in [(ROOK, 0), (ROOK, 7), (KNIGHT, 1), (KNIGHT, 6), (BISHOP, 2), (BISHOP, 5), (QUEEN, 3), (KING, 4)] {
                 match i {
-                    1 => {
+                    0 => {
                         let new_piece = Piece {
                             typ: piece_typ.0,
                             position: vec![i, piece_typ.1],
@@ -189,7 +197,7 @@ fn main() {
                         };
                         pieces.push(new_piece);
                     },
-                    6 => {
+                    7 => {
                         let new_piece = Piece {
                             typ: piece_typ.0,
                             position: vec![i, piece_typ.1],
@@ -206,13 +214,13 @@ fn main() {
         }
     }
 
-    while true {
-        print_state(&mut board);
+    loop {
+        print_board(&pieces);
         let maybe_movement = parse_input();
         match maybe_movement {
             None => continue,
             Some(movement) => {
-                move_piece(&mut board, &pieces, vec![movement[0], movement[1]], vec![movement[2], movement[3]]);
+                move_piece(&mut pieces, vec![movement[0], movement[1]], vec![movement[2], movement[3]]);
             }
         }
     }
