@@ -60,9 +60,7 @@ fn print_board(pieces: &Vec<Piece>) {
 }
 
 fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>) {
-    fn move_piece_to_dest(piece_index: usize, mut pieces: &mut Vec<Piece>, destination: &Vec<usize>) {
-        // let mut piece = &pieces[piece_index];
-        // let old_location = vec![piece.position[0], piece.position[1]];
+    fn move_piece_to_dest(piece_index: usize, pieces: &mut Vec<Piece>, destination: &Vec<usize>) {
         pieces[piece_index].position = vec![destination[0], destination[1]];
         pieces[piece_index].times_moved += 1;
     }
