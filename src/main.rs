@@ -18,12 +18,17 @@ struct Piece<'a> {
     pub position: Vec<usize>,
     pub times_moved: usize,
     pub side: Side,
+    pub captured: bool,
 }
 
 fn position_to_piece(pieces: &Vec<Piece>, position: &Vec<usize>) -> Option<usize> {
     // Discovers the piece at the requested position. Returns the address in pieces, if exists.
     // Starting with O(N), I should probably make this O(1) at some point...    
     for piece_index in 0..pieces.len() {
+        if pieces[piece_index].captured {
+            // Doesn't count as being in a position
+            continue;
+        }
         if pieces[piece_index].position[0] == position[0] && pieces[piece_index].position[1] == position[1] {
             return Some(piece_index);
         }
@@ -46,6 +51,10 @@ fn print_board(pieces: &Vec<Piece>) {
             match position_to_piece(&pieces, &pos) {
                 None => print!("{}{bg_reset}", EMPTY),
                 Some(piece_index) => {
+                    if pieces[piece_index].captured {
+                        // If captured, don't display
+                        continue;
+                    }
                     if pieces[piece_index].side == Side::Black {
                         print!("{color_bright_red}");
                     } else {
@@ -126,10 +135,10 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                                 let mut position_of_neighboring_piece: Vec<usize> = vec![];
                                 if piece.side == Side::White {
                                     // Extra piece would be above
-                                    position_of_neighboring_piece.push(piece.position[0] + 1);
+                                    position_of_neighboring_piece.push(piece.position[0] - 1);
                                 } else {
                                     // Extra piece would be below
-                                    position_of_neighboring_piece.push(piece.position[0] - 1);
+                                    position_of_neighboring_piece.push(piece.position[0] + 1);
                                 }
                                 position_of_neighboring_piece.push(piece.position[1]);
                                 let maybe_piece = position_to_piece(&pieces, &position_of_neighboring_piece);
@@ -145,6 +154,35 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                         }
                         println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", piece.position, destination);
                         return false; 
+                    }
+                    // Maybe trying to move diagonal
+                    // For Black, must be down. For White, must be up.
+                    // For Black and White, must be either right or left by one
+                    // First check up/down by one
+                    if (piece.side == Side::Black && piece.position[0] + 1 != destination[0]) || (piece.side == Side::White && piece.position[0] - 1 != destination[0]) {
+                        // Bad
+                        println!("Must move pawn up or down depending on side. Piece {:?}, Requested destination {:?}", piece.position, destination);
+                        return false;
+                    }
+                    // Now check moving right/left
+                    if !((piece.position[1] > 0 && piece.position[1] - 1 == destination[1]) || piece.position[1] + 1 == destination[1]) {
+                        // Bad
+                        println!("Must move pawn right/left or straight up/down. Piece {:?}, Requested destination: {:?}", piece.position, destination);
+                        return false;
+                    }
+                    // We may take over a piece
+                    match maybe_piece_at_destination {
+                        None => {
+                            // Just move
+                            move_piece_to_dest(piece_index, &mut pieces, &destination);
+                            return true;
+                        },
+                        Some(destination_piece_index) => {
+                            // Capture the piece
+                            pieces[destination_piece_index].captured = true;
+                            move_piece_to_dest(piece_index, &mut pieces, &destination);
+                            return true;
+                        }
                     }
                 },
                 _ => {
@@ -201,7 +239,8 @@ fn main() {
                             typ: PAWN,
                             position: vec![i, j],
                             times_moved: 0,
-                            side: Side::Black   
+                            side: Side::Black,
+                            captured: false
                         };
                         pieces.push(new_piece);
                     },
@@ -210,7 +249,8 @@ fn main() {
                             typ: PAWN,
                             position: vec![i, j],
                             times_moved: 0,
-                            side: Side::White   
+                            side: Side::White,
+                            captured: false
                         };
                         pieces.push(new_piece);
                     },
@@ -228,7 +268,8 @@ fn main() {
                             typ: piece_typ.0,
                             position: vec![i, piece_typ.1],
                             times_moved: 0,
-                            side: Side::Black   
+                            side: Side::Black,
+                            captured: false   
                         };
                         pieces.push(new_piece);
                     },
@@ -237,7 +278,8 @@ fn main() {
                             typ: piece_typ.0,
                             position: vec![i, piece_typ.1],
                             times_moved: 0,
-                            side: Side::White   
+                            side: Side::White,
+                            captured: false,   
                         };
                         pieces.push(new_piece);
                     }
