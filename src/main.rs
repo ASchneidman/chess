@@ -121,6 +121,24 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                         // Allowed!
                         // Check destination is empty
                         if maybe_piece_at_destination.is_none() {
+                            // If moving by 2, check that we aren't jumping over a piece
+                            if amt_wanting_to_move == 2 {
+                                let mut position_of_neighboring_piece: Vec<usize> = vec![];
+                                if piece.side == Side::White {
+                                    // Extra piece would be above
+                                    position_of_neighboring_piece.push(piece.position[0] + 1);
+                                } else {
+                                    // Extra piece would be below
+                                    position_of_neighboring_piece.push(piece.position[0] - 1);
+                                }
+                                position_of_neighboring_piece.push(piece.position[1]);
+                                let maybe_piece = position_to_piece(&pieces, &position_of_neighboring_piece);
+                                if maybe_piece.is_some() {
+                                    // Not allowed!
+                                    println!("Cannot move pawn over piece.");
+                                    return false;
+                                }
+                            }
                             // Good to go!
                             move_piece_to_dest(piece_index, &mut pieces, &destination);
                             return true;
