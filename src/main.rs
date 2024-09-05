@@ -192,8 +192,9 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     // We may take over a piece
                     match maybe_piece_at_destination {
                         None => {
-                            // Just move
-                            move_piece_to_dest(piece_index, &mut pieces, &destination);
+                            // Not allowed to move diagonal if no piece there
+                            println!("Can only move pawn diagonal if capturing a piece.");
+                            return false;
                         },
                         Some(destination_piece_index) => {
                             // Capture the piece
@@ -206,6 +207,13 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                         pieces[piece_index].transform_typ(QUEEN);
                     }
                     return true;
+                },
+                ROOK => {
+                    // Can go left/right
+                    if pieces[piece_index].position[1] == destination[1] {
+                        // Wants to go left/right
+
+                    }
                 },
                 _ => {
                     // Won't happen
