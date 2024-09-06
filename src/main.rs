@@ -116,7 +116,6 @@ fn is_piece_jumping_over_piece(pieces: &Vec<Piece>, piece: &Piece, destination: 
                 positions_to_check.push((pos_0, pos_1));
                 pos_1 -= 1;
             }
-
         } else if piece.position[0] > destination[0] && piece.position[1] < destination[1] {
             // up/right
             // 1..5 => 1,2,3,4 => 4,3,2,1
@@ -166,10 +165,11 @@ fn is_piece_jumping_over_piece(pieces: &Vec<Piece>, piece: &Piece, destination: 
     let maybe_another_piece = position_to_piece(&pieces, &destination);
     match maybe_another_piece {
         None => {
-            is_jumping_onto_piece = true;
+            // Don't populate, not landing on another piece
         },
-        Some(_) => {
-            is_jumping_onto_piece = false;
+        Some(index) => {
+            // Populate, landing on another piece
+            *is_jumping_onto_piece = index;
         }
     }
     return false;
@@ -303,6 +303,7 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     return true;
                 },
                 ROOK => {
+                    panic!("Not yet implemented.");
                     // Check that the destination is directly up/down or left/right from rook
                     if !((pieces[piece_index].position[0] == destination[0] && pieces[piece_index].position[1] != destination[1])
                         || (pieces[piece_index].position[0] != destination[0] && pieces[piece_index].position[1] == destination[1])) {
@@ -317,6 +318,9 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     if pieces[piece_index].position[0] == destination[0] && destination[1] < pieces[piece_index].position[1] {
                         
                     }
+                },
+                ROOK {
+                    
                 },
                 _ => {
                     // Won't happen
