@@ -1,4 +1,4 @@
-use std::io::{self, BufRead};
+use std::{cmp::{max, min}, io::{self, BufRead}, iter::Rev, ops::Range};
 use inline_colorization::*;
 
 const PAWN: &str = "pawn  ";
@@ -86,6 +86,95 @@ fn print_board(pieces: &Vec<Piece>) {
     }
 }
 
+fn is_piece_jumping_over_piece(pieces: &Vec<Piece>, piece: &Piece, destination: &Vec<usize>, is_jumping_onto_piece: &mut usize) -> bool {
+    // Tells whether a piece moving from its current location to destination is jumping over another piece.
+    // Returns true if jumping over another piece. 
+    // Returns false if not. If jumping onto another piece, populates is_jumping_onto_piece with index of target piece. 
+
+    let max_0th: usize = max(piece.position[0], destination[0]);
+    let max_1th: usize = max(piece.position[1], destination[1]);
+    let min_0th: usize = min(piece.position[0], destination[0]);
+    let min_1th: usize = min(piece.position[1], destination[1]);
+
+    // Movement must be up/down, left/right, or diagonal
+    if piece.position[0] == destination[0] && piece.position[1] != destination[1] {
+        // Moving left/right
+        panic!("Not implemented");
+    } else if piece.position[1] == destination[1] && piece.position[0] == destination[0] {
+        // Moving up/down
+        panic!("Not implemented");
+    } else if (max_0th - min_0th) == (max_1th - min_1th) {
+        // Moving diagonal
+        let mut positions_to_check: Vec<(usize, usize)> = vec![];
+        if piece.position[0] > destination[0] && piece.position[1] > destination[1] {
+            // up/left
+            // 1..5 => 1,2,3,4 => 4,3,2,1
+            // 1..1 => 1 => 1
+            // full example: (2,5) -> (0,0) => (1,4)
+            let mut pos_1 = piece.position[1] - 1;
+            for pos_0 in ((destination[0] + 1)..(piece.position[0] - 1)).rev() {
+                positions_to_check.push((pos_0, pos_1));
+                pos_1 -= 1;
+            }
+
+        } else if piece.position[0] > destination[0] && piece.position[1] < destination[1] {
+            // up/right
+            // 1..5 => 1,2,3,4 => 4,3,2,1
+            // 1..1 => 1 => 1
+            // full example: (2,1) -> (0,3) => (1,2)
+            let mut pos_1 = piece.position[1] + 1;
+            for pos_0 in ((destination[0] + 1)..(piece.position[0] - 1)).rev() {
+                positions_to_check.push((pos_0, pos_1));
+                pos_1 += 1;
+            }
+        } else if piece.position[0] < destination[0] && piece.position[1] > destination[1] {
+            // down/left
+            // 1..5 => 1,2,3,4 => 4,3,2,1
+            // 1..1 => 1 => 1
+            // full example: (0,3) -> (2,1) => (1,2)
+            let mut pos_1 = piece.position[1] - 1;
+            for pos_0 in (piece.position[0]+1)..destination[0] {
+                positions_to_check.push((pos_0, pos_1));
+                pos_1 -= 1;
+            }
+        } else if piece.position[0] < destination[0] && piece.position[1] < destination[1] {
+            // down/right
+            // 1..5 => 1,2,3,4 => 4,3,2,1
+            // 1..1 => 1 => 1
+            // full example: (0,3) -> (2,5) => (1,4)
+            let mut pos_1 = piece.position[1] + 1;
+            for pos_0 in (piece.position[0]+1)..destination[0] {
+                positions_to_check.push((pos_0, pos_1));
+                pos_1 += 1;
+            }
+        } else {
+            panic!("Got invalid diagonal movement: Piece {:?} Destination {:?}", piece.position, destination);
+        }
+        // end might be smaller than start
+        // pos_1 might be larger than destination[1]
+        for pos in positions_to_check {
+            let next_pos = vec![pos.0, pos.1];
+            let maybe_another_piece = position_to_piece(&pieces, &next_pos);
+            if !maybe_another_piece.is_none() {
+                // Piece there, not good! Jumping over piece
+                return true;
+            }
+        }
+    }
+
+    // Check capturing piece.
+    let maybe_another_piece = position_to_piece(&pieces, &destination);
+    match maybe_another_piece {
+        None => {
+            is_jumping_onto_piece = true;
+        },
+        Some(_) => {
+            is_jumping_onto_piece = false;
+        }
+    }
+    return false;
+}
+
 fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>, turn: Side) -> bool {
     fn move_piece_to_dest(piece_index: usize, pieces: &mut Vec<Piece>, destination: &Vec<usize>) {
         pieces[piece_index].position = vec![destination[0], destination[1]];
@@ -110,6 +199,11 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
             // Evaluate the requested destination based on the piece type
             if pieces[piece_index].side != turn {
                 println!("Not the turn for the requested piece. It is {:?} turn.", turn);
+                return false;
+            }
+            if destination[0] == pieces[piece_index].position[0] && destination[1] == pieces[piece_index].position[1] {
+                // Have to move somewhere!
+                println!("Have to move the piece somewhere.");
                 return false;
             }
             match pieces[piece_index].typ() {
@@ -209,10 +303,19 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     return true;
                 },
                 ROOK => {
-                    // Can go left/right
-                    if pieces[piece_index].position[1] == destination[1] {
-                        // Wants to go left/right
-
+                    // Check that the destination is directly up/down or left/right from rook
+                    if !((pieces[piece_index].position[0] == destination[0] && pieces[piece_index].position[1] != destination[1])
+                        || (pieces[piece_index].position[0] != destination[0] && pieces[piece_index].position[1] == destination[1])) {
+                            // NOT! correctly moving up/down or left/right. 
+                            println!("Can only move rook up/down or left/right");
+                            return false;
+                        }
+                    // Rook cannot jump over pieces. Follow from positions from current piece to destination to detect if there's a piece there its jumping over.
+                    let mut piece_start: usize = 0;
+                    let mut piece_end: usize = 0;
+                    // Moving up
+                    if pieces[piece_index].position[0] == destination[0] && destination[1] < pieces[piece_index].position[1] {
+                        
                     }
                 },
                 _ => {
