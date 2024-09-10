@@ -37,6 +37,141 @@ impl Piece {
         }
         panic!("Invalid piece type change: {}", new_typ);
     }
+
+    fn valid_movements(&self, pieces: &Vec<Piece>) -> Vec<(usize, usize)> {
+        // These are helpers which just check if a particular directional movement
+        // is on the board
+        fn move_up(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount > piece.position[0] {
+                // Can't move up that much
+                return None;
+            }
+            return Some((piece.position[0] - amount, piece.position[1]));
+        }
+        fn move_down(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount + piece.position[0] >= 8 {
+                // Can't move down that much
+                return None;
+            }
+            return Some((piece.position[0] + amount, piece.position[1]));
+        }
+        fn move_diagonal_up_left(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount > piece.position[0] {
+                // Can't move up that much
+                return None;
+            }
+            if amount > piece.position[1] {
+                // Can't move left that much
+                return None;
+            }
+            return Some((piece.position[0] - amount, piece.position[1] - amount));
+        }
+        fn move_diagonal_up_right(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount > piece.position[0] {
+                // Can't move up that much
+                return None;
+            }
+            if amount + piece.position[1] >= 8 {
+                // Can't move right that much
+                return None;
+            }
+            return Some((piece.position[0] - amount, piece.position[1] + amount));
+        }
+        fn move_diagonal_down_left(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount + piece.position[0] >= 8 {
+                // Can't move down that much
+                return None;
+            }
+            if amount > piece.position[1] {
+                // Can't move left that much
+                return None;
+            }
+            return Some((piece.position[0] + amount, piece.position[1] - amount));
+        }
+        fn move_diagonal_down_right(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
+            if amount + piece.position[0] >= 8 {
+                // Can't move down that much
+                return None;
+            }
+            if amount + piece.position[1] >= 8 {
+                // Can't move right that much
+                return None;
+            }
+            return Some((piece.position[0] + amount, piece.position[1] + amount));
+        }
+
+        let mut all_valid_movements: Vec<(usize, usize)> = vec![];
+        match self.typ() {
+            PAWN => {
+                {
+                    // Can move up if white, down if black
+                    let one_move = if self.side == Side::Black { move_down(1, &self) } else { move_up(1, &self) };
+                    match one_move {
+                        Some((new_pos0, new_pos1)) => {
+                            // Check that there isn't a piece there
+                            let new_pos = vec![new_pos0, new_pos1];
+                            if position_to_piece(&pieces, &new_pos).is_none() {
+                                // Can go there!
+                                all_valid_movements.push((new_pos0, new_pos1));
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+                {
+                    // If first turn, can move two spots up/down
+                    if self.times_moved == 0 {
+                        // First turn!
+                        let two_move = if self.side == Side::Black { move_down(2, &self) } else { move_up(2, &self) };
+                        match two_move {
+                            Some((new_pos0, new_pos1)) => {
+                                // Check that there isn't a piece there
+                                let new_pos = vec![new_pos0, new_pos1];
+                                if position_to_piece(&pieces, &new_pos).is_none() {
+                                    // Can go there!
+                                    all_valid_movements.push((new_pos0, new_pos1));
+                                }
+                            },
+                            _ => {}
+                        }
+                        }
+                }
+                {
+                    // Can only move diagonal by capturing
+                    let mut potential_diag_positions: Vec<Option<(usize, usize)>> = vec![];
+                    let diag_right = if self.side == Side::Black { move_diagonal_down_right(1, &self) } else { move_diagonal_up_right(1, &self) };
+                    let diag_left = if self.side == Side::Black { move_diagonal_down_left(1, &self) } else { move_diagonal_up_left(1, &self) };
+                    potential_diag_positions.push(diag_right);
+                    potential_diag_positions.push(diag_left);
+
+                    for diag in potential_diag_positions {
+                        match diag {
+                            Some((pos_0, pos_1)) => {
+                                let new_pos = vec![pos_0, pos_1];
+                                let maybe_piece_index_approaching = position_to_piece(&pieces, &new_pos);
+                                match maybe_piece_index_approaching {
+                                    Some(piece_index_approaching) => {
+                                        if pieces[piece_index_approaching].side != self.side {
+                                            // Enemy!
+                                            all_valid_movements.push((pos_0, pos_1));
+                                        }
+                                    },
+                                    None => {
+                                        // Can't move there if no enemy piece there
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                    }
+                }
+            },
+            _ => {
+                panic!("Bad piece!");
+            }
+        }
+        return all_valid_movements;
+    }
 }
 
 fn position_to_piece(pieces: &Vec<Piece>, position: &Vec<usize>) -> Option<usize> {
@@ -99,7 +234,7 @@ fn is_piece_jumping_over_piece(pieces: &Vec<Piece>, piece: &Piece, destination: 
     // Movement must be up/down, left/right, or diagonal
     if piece.position[0] == destination[0] && piece.position[1] != destination[1] {
         // Moving left/right
-        panic!("Not implemented");
+        let mut positions_to_check: Vec<(usize, usize)> = vec![];
     } else if piece.position[1] == destination[1] && piece.position[0] == destination[0] {
         // Moving up/down
         panic!("Not implemented");
@@ -201,6 +336,24 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                 println!("Not the turn for the requested piece. It is {:?} turn.", turn);
                 return false;
             }
+
+            let allowed_positions = pieces[piece_index].valid_movements(&pieces);
+            println!("{:?}", allowed_positions);
+            for allowed_pos in allowed_positions {
+                if allowed_pos.0 == destination[0] && allowed_pos.1 == destination[1] {
+                    // Check if there's a enemy piece there
+                    match maybe_piece_at_destination {
+                        Some(other_piece_index) => {
+                            pieces[other_piece_index].captured = true;
+                        },
+                        None => {},
+                    }
+                    move_piece_to_dest(piece_index, &mut pieces, &destination);
+                    return true;
+                }
+            }
+
+            /*
             if destination[0] == pieces[piece_index].position[0] && destination[1] == pieces[piece_index].position[1] {
                 // Have to move somewhere!
                 println!("Have to move the piece somewhere.");
@@ -327,6 +480,7 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     return false;
                 }
             }
+            */
         }
     }
     return false;
