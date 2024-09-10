@@ -167,7 +167,6 @@ impl Piece {
                 }
             },
             _ => {
-                panic!("Bad piece!");
             }
         }
         return all_valid_movements;
@@ -338,7 +337,6 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
             }
 
             let allowed_positions = pieces[piece_index].valid_movements(&pieces);
-            println!("{:?}", allowed_positions);
             for allowed_pos in allowed_positions {
                 if allowed_pos.0 == destination[0] && allowed_pos.1 == destination[1] {
                     // Check if there's a enemy piece there
@@ -349,6 +347,10 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                         None => {},
                     }
                     move_piece_to_dest(piece_index, &mut pieces, &destination);
+                    // If pawn reaches the end, turns into a QUEEN
+                    if pieces[piece_index].typ() == PAWN && (pieces[piece_index].position[0] == 0 || pieces[piece_index].position[0] == 7) {
+                        pieces[piece_index].transform_typ(QUEEN);           
+                    }
                     return true;
                 }
             }
