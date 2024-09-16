@@ -41,77 +41,144 @@ impl Piece {
     fn valid_movements(&self, pieces: &Vec<Piece>) -> Vec<(usize, usize)> {
         // These are helpers which just check if a particular directional movement
         // is on the board
-        fn move_up(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount > piece.position[0] {
+        fn move_up(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount > piece.0 {
                 // Can't move up that much
                 return None;
             }
-            return Some((piece.position[0] - amount, piece.position[1]));
+            return Some((piece.0 - amount, piece.1));
         }
-        fn move_down(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount + piece.position[0] >= 8 {
+        fn move_down(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount + piece.0 >= 8 {
                 // Can't move down that much
                 return None;
             }
-            return Some((piece.position[0] + amount, piece.position[1]));
+            return Some((piece.0 + amount, piece.1));
         }
-        fn move_left(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount > piece.position[1] {
+        fn move_left(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount > piece.1 {
                 // Can't move left that much
                 return None;
             }
-            return Some((piece.position[0], piece.position[1] - amount));
+            return Some((piece.0, piece.1 - amount));
         }
-        fn move_right(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount + piece.position[1] >= 8 {
+        fn move_right(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount + piece.1 >= 8 {
                 // Can't move right that much
                 return None;
             }
-            return Some((piece.position[0], piece.position[1] + amount));
+            return Some((piece.0, piece.1 + amount));
         }
-        fn move_diagonal_up_left(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount > piece.position[0] {
+        fn move_diagonal_up_left(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount > piece.0 {
                 // Can't move up that much
                 return None;
             }
-            if amount > piece.position[1] {
+            if amount > piece.1 {
                 // Can't move left that much
                 return None;
             }
-            return Some((piece.position[0] - amount, piece.position[1] - amount));
+            return Some((piece.0 - amount, piece.1 - amount));
         }
-        fn move_diagonal_up_right(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount > piece.position[0] {
+        fn move_diagonal_up_right(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount > piece.0 {
                 // Can't move up that much
                 return None;
             }
-            if amount + piece.position[1] >= 8 {
+            if amount + piece.1 >= 8 {
                 // Can't move right that much
                 return None;
             }
-            return Some((piece.position[0] - amount, piece.position[1] + amount));
+            return Some((piece.0 - amount, piece.1 + amount));
         }
-        fn move_diagonal_down_left(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount + piece.position[0] >= 8 {
+        fn move_diagonal_down_left(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount + piece.0 >= 8 {
                 // Can't move down that much
                 return None;
             }
-            if amount > piece.position[1] {
+            if amount > piece.1 {
                 // Can't move left that much
                 return None;
             }
-            return Some((piece.position[0] + amount, piece.position[1] - amount));
+            return Some((piece.0 + amount, piece.1 - amount));
         }
-        fn move_diagonal_down_right(amount: usize, piece: &Piece) -> Option<(usize, usize)> {
-            if amount + piece.position[0] >= 8 {
+        fn move_diagonal_down_right(amount: usize, piece: (usize, usize)) -> Option<(usize, usize)> {
+            if amount + piece.0 >= 8 {
                 // Can't move down that much
                 return None;
             }
-            if amount + piece.position[1] >= 8 {
+            if amount + piece.1 >= 8 {
                 // Can't move right that much
                 return None;
             }
-            return Some((piece.position[0] + amount, piece.position[1] + amount));
+            return Some((piece.0 + amount, piece.1 + amount));
+        }
+        fn find_all_movements(pieces: &Vec<Piece>, piece: &Piece, all_valid_movements: &mut Vec<(usize, usize)>, straight: bool, diagonal: bool) {
+            // Populates all_valid_movements with the allowed movements of straight and/or diagonal without passing over pieces
+            // can't jump over another piece
+            // can capture piece
+
+            // Can only move up 7 (the entire board)
+            let mut done_up = !straight;
+            let mut done_down = !straight;
+            let mut done_left = !straight;
+            let mut done_right = !straight;
+            let mut done_up_left = !diagonal;
+            let mut done_down_right = !diagonal;
+            let mut done_up_right = !diagonal;
+            let mut done_down_left = !diagonal;
+            for amount in 1..8 {
+                let maybe_movement_up = move_up(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_down = move_down(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_left: Option<(usize, usize)> = move_left(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_right: Option<(usize, usize)> = move_right(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_up_left = move_diagonal_up_left(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_down_right = move_diagonal_down_right(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_down_left: Option<(usize, usize)> = move_diagonal_down_left(amount, (piece.position[0], piece.position[1]));
+                let maybe_movement_up_right: Option<(usize, usize)> = move_diagonal_up_right(amount, (piece.position[0], piece.position[1]));
+                for (maybe_movement, done) in [
+                    (maybe_movement_up, &mut done_up), 
+                    (maybe_movement_down, &mut done_down), 
+                    (maybe_movement_left, &mut done_left), 
+                    (maybe_movement_right, &mut done_right),
+                    (maybe_movement_up_left, &mut done_up_left), 
+                    (maybe_movement_down_right, &mut done_down_right), 
+                    (maybe_movement_down_left, &mut done_down_left), 
+                    (maybe_movement_up_right, &mut done_up_right)] {
+                    if *done == true {
+                        continue;
+                    }
+                    match maybe_movement {
+                        None => {
+                            // Not allowed, done.
+                            *done = true;
+                            continue;
+                        },
+                        Some((pos0, pos1)) => {
+                            // If another piece there that is ours, is done
+                            let pos = vec![pos0, pos1];
+                            let maybe_other_piece = position_to_piece(&pieces, &pos);
+                            match maybe_other_piece {
+                                Some(other_piece_index) => {
+                                    if pieces[other_piece_index].side == piece.side {
+                                        // Our piece. Not allowed, done.
+                                        *done = true;
+                                        continue;
+                                    }
+                                    // Not our piece, can take it over, then done.
+                                    all_valid_movements.push((pos0, pos1));
+                                    *done = true;
+                                    continue;
+                                },
+                                _ => {
+                                    // No piece there, can move!
+                                    all_valid_movements.push((pos0, pos1));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         let mut all_valid_movements: Vec<(usize, usize)> = vec![];
@@ -119,7 +186,7 @@ impl Piece {
             PAWN => {
                 {
                     // Can move up if white, down if black
-                    let one_move = if self.side == Side::Black { move_down(1, &self) } else { move_up(1, &self) };
+                    let one_move = if self.side == Side::Black { move_down(1, (self.position[0], self.position[1])) } else { move_up(1, (self.position[0], self.position[1])) };
                     match one_move {
                         Some((new_pos0, new_pos1)) => {
                             // Check that there isn't a piece there
@@ -136,7 +203,7 @@ impl Piece {
                     // If first turn, can move two spots up/down
                     if self.times_moved == 0 {
                         // First turn!
-                        let two_move = if self.side == Side::Black { move_down(2, &self) } else { move_up(2, &self) };
+                        let two_move = if self.side == Side::Black { move_down(2, (self.position[0], self.position[1])) } else { move_up(2, (self.position[0], self.position[1])) };
                         match two_move {
                             Some((new_pos0, new_pos1)) => {
                                 // Check that there isn't a piece there
@@ -153,8 +220,8 @@ impl Piece {
                 {
                     // Can only move diagonal by capturing
                     let mut potential_diag_positions: Vec<Option<(usize, usize)>> = vec![];
-                    let diag_right = if self.side == Side::Black { move_diagonal_down_right(1, &self) } else { move_diagonal_up_right(1, &self) };
-                    let diag_left = if self.side == Side::Black { move_diagonal_down_left(1, &self) } else { move_diagonal_up_left(1, &self) };
+                    let diag_right = if self.side == Side::Black { move_diagonal_down_right(1, (self.position[0], self.position[1])) } else { move_diagonal_up_right(1, (self.position[0], self.position[1])) };
+                    let diag_left = if self.side == Side::Black { move_diagonal_down_left(1, (self.position[0], self.position[1])) } else { move_diagonal_up_left(1, (self.position[0], self.position[1])) };
                     potential_diag_positions.push(diag_right);
                     potential_diag_positions.push(diag_left);
 
@@ -181,63 +248,129 @@ impl Piece {
                 }
             },
             ROOK => {
-                // up, down, left, right starting from current pos
-                // can't jump over another piece
-                // can capture piece
-                
-                // move up
-                // Can only move up 7 (the entire board)
-                let mut done_up = false;
-                let mut done_down = false;
-                let mut done_left = false;
-                let mut done_right = false;
-                for amount in 1..8 {
-                    let maybe_movement_up = move_up(amount, &self);
-                    let maybe_movement_down = move_down(amount, &self);
-                    let maybe_movement_left: Option<(usize, usize)> = move_left(amount, &self);
-                    let maybe_movement_right: Option<(usize, usize)> = move_right(amount, &self);
-                    for (maybe_movement, done) in [
-                        (maybe_movement_up, &mut done_up), 
-                        (maybe_movement_down, &mut done_down), 
-                        (maybe_movement_left, &mut done_left), 
-                        (maybe_movement_right, &mut done_right)] {
-                        if *done == true {
-                            continue;
-                        }
-                        match maybe_movement {
-                            None => {
-                                // Not allowed, done.
-                                *done = true;
-                                continue;
-                            },
-                            Some((pos0, pos1)) => {
-                                // If another piece there that is ours, is done
-                                let pos = vec![pos0, pos1];
-                                let maybe_other_piece = position_to_piece(&pieces, &pos);
-                                match maybe_other_piece {
-                                    Some(other_piece_index) => {
-                                        if pieces[other_piece_index].side == self.side {
-                                            // Our piece. Not allowed, done.
-                                            *done = true;
-                                            continue;
+                find_all_movements(&pieces, &self, &mut all_valid_movements, true, false);
+            }
+            KNIGHT => {
+                // up,down,left,right by 2 then right/left by 1
+                // Curry all the move helpers to make the main helper cleaner
+                let move_right = |amount| move |piece| move_right(amount, piece);
+                let move_left = |amount| move |piece| move_left(amount, piece);
+                let move_up = |amount| move |piece| move_up(amount, piece);
+                let move_down = |amount| move |piece| move_down(amount, piece);
+                // Helper which tries to move the knight by two moves. If the move is valid, adds to all_valid_movements
+                fn move_fn(
+                    first_move: impl Fn((usize, usize)) -> Option<(usize, usize)>, 
+                    second_move: impl Fn((usize, usize)) -> Option<(usize, usize)>, 
+                    start_pos: (usize, usize),
+                    pieces: &Vec<Piece>,
+                    piece: &Piece,
+                    all_valid_movements: &mut Vec<(usize, usize)>)  {
+                    // first_move and second_move are curried with the amount they need to move by (2 or 1 each)
+                    match first_move(start_pos) {
+                        Some((pov0, pov1)) =>  {
+                            // Where second move should start from
+                            match second_move((pov0, pov1)) {
+                                Some((final_pov0, final_pov1))  => {
+                                    // Can only move here if enemy piece or no piece
+                                    let final_pos = vec![final_pov0, final_pov1];
+                                    match position_to_piece(&pieces, &final_pos) {
+                                        None => {
+                                            // Can go there
+                                            all_valid_movements.push((final_pov0, final_pov1));
+                                        },
+                                        Some(other_index) => {
+                                            if pieces[other_index].side != piece.side {
+                                                // Enemy, so we can move there
+                                                all_valid_movements.push((final_pov0, final_pov1));
+                                            }
                                         }
-                                        // Not our piece, can take it over, then done.
-                                        all_valid_movements.push((pos0, pos1));
-                                        *done = true;
-                                        continue;
-                                    },
-                                    _ => {
-                                        // No piece there, can move!
-                                        all_valid_movements.push((pos0, pos1));
                                     }
+                                },
+                                None => {
+                                    // Can't move there
                                 }
                             }
+                        },
+                        None => {
+                            // Can't move there
                         }
                     }
                 }
-            }
+                // up 2, left 1
+                move_fn(
+                    move_up(2), 
+                    move_left(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // up 2, right 1
+                move_fn(
+                    move_up(2), 
+                    move_right(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // down 2, left 1
+                move_fn(
+                    move_down(2), 
+                    move_left(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // down 2, right 1
+                move_fn(
+                    move_down(2), 
+                    move_right(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // right 2, up 1
+                move_fn(
+                    move_right(2), 
+                    move_up(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // right 2, down 1
+                move_fn(
+                    move_right(2), 
+                    move_down(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // left 2, up 1
+                move_fn(
+                    move_left(2), 
+                    move_up(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+                // left 2, down 1
+                move_fn(
+                    move_left(2), 
+                    move_down(1), 
+                    (self.position[0], self.position[1]),
+                    &pieces,
+                    &self,
+                    &mut all_valid_movements);
+            },
+            BISHOP => {
+                // can move max 7 diagonal all directions, not over any pieces
+                // very similar to rooks except diagonal instead
+                find_all_movements(&pieces, &self, &mut all_valid_movements, false, true);
+            },
+            QUEEN => {
+                find_all_movements(&pieces, &self, &mut all_valid_movements, true, true);
+            },
             _ => {
-            }
+            },
         }
         return all_valid_movements;
     }
@@ -425,135 +558,6 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
                     return true;
                 }
             }
-
-            /*
-            if destination[0] == pieces[piece_index].position[0] && destination[1] == pieces[piece_index].position[1] {
-                // Have to move somewhere!
-                println!("Have to move the piece somewhere.");
-                return false;
-            }
-            match pieces[piece_index].typ() {
-                PAWN => {
-                    // If first move for the pawn, it can move one or two forward. Otherwise, only one forward. Or can capture diagonal left or right. 
-                    // Check player side. White can only go up, Black can only go down.
-                    if (pieces[piece_index].side == Side::Black && destination[0] <= pieces[piece_index].position[0]) 
-                        || (pieces[piece_index].side == Side::White && destination[0] >= pieces[piece_index].position[0]) {
-                        println!("Requested moving pawn wrong direction, so incorrect. Piece {:?}, Requested destination {:?}", pieces[piece_index].position, destination);
-                        return false;
-                    }
-                    // Check if trying to move down or diagonal
-                    if destination[1] == pieces[piece_index].position[1] {
-                        // Trying to move down
-                        // If first move, it can move one or two. Otherwise, only one
-                        let amt_wanting_to_move: usize;
-                        if pieces[piece_index].side == Side::Black {
-                            amt_wanting_to_move = destination[0] - pieces[piece_index].position[0];
-                        } else {
-                            amt_wanting_to_move = pieces[piece_index].position[0] - destination[0];
-                        }
-                        let mut good_movement: bool = false;
-                        if amt_wanting_to_move == 2 && pieces[piece_index].times_moved == 0 {
-                            good_movement = true;
-                        } else if amt_wanting_to_move == 1 {
-                            good_movement = true;
-                        } else {
-                            good_movement = false;
-                        }
-                        if good_movement == false {
-                            // Not allowed...
-                            println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", pieces[piece_index].position, destination);
-                            return false;
-                        }
-                        // Allowed!
-                        // Check destination is empty
-                        if maybe_piece_at_destination.is_none() {
-                            // If moving by 2, check that we aren't jumping over a piece
-                            if amt_wanting_to_move == 2 {
-                                let mut position_of_neighboring_piece: Vec<usize> = vec![];
-                                if pieces[piece_index].side == Side::White {
-                                    // Extra piece would be above
-                                    position_of_neighboring_piece.push(pieces[piece_index].position[0] - 1);
-                                } else {
-                                    // Extra piece would be below
-                                    position_of_neighboring_piece.push(pieces[piece_index].position[0] + 1);
-                                }
-                                position_of_neighboring_piece.push(pieces[piece_index].position[1]);
-                                let maybe_piece = position_to_piece(&pieces, &position_of_neighboring_piece);
-                                if maybe_piece.is_some() {
-                                    // Not allowed!
-                                    println!("Cannot move pawn over piece.");
-                                    return false;
-                                }
-                            }
-                            // Good to go!
-                            move_piece_to_dest(piece_index, &mut pieces, &destination);
-                            return true;
-                        }
-                        println!("Bad requested moving pawn. Piece {:?}, Requested destination {:?}", pieces[piece_index].position, destination);
-                        return false; 
-                    }
-                    // Maybe trying to move diagonal
-                    // For Black, must be down. For White, must be up.
-                    // For Black and White, must be either right or left by one
-                    // First check up/down by one
-                    if (pieces[piece_index].side == Side::Black && pieces[piece_index].position[0] + 1 != destination[0]) 
-                        || (pieces[piece_index].side == Side::White && pieces[piece_index].position[0] - 1 != destination[0]) {
-                        // Bad
-                        println!("Must move pawn up or down depending on side. Piece {:?}, Requested destination {:?}", pieces[piece_index].position, destination);
-                        return false;
-                    }
-                    // Now check moving right/left
-                    if !((pieces[piece_index].position[1] > 0 && pieces[piece_index].position[1] - 1 == destination[1]) 
-                        || pieces[piece_index].position[1] + 1 == destination[1]) {
-                        // Bad
-                        println!("Must move pawn right/left or straight up/down. Piece {:?}, Requested destination: {:?}", pieces[piece_index].position, destination);
-                        return false;
-                    }
-                    // We may take over a piece
-                    match maybe_piece_at_destination {
-                        None => {
-                            // Not allowed to move diagonal if no piece there
-                            println!("Can only move pawn diagonal if capturing a piece.");
-                            return false;
-                        },
-                        Some(destination_piece_index) => {
-                            // Capture the piece
-                            pieces[destination_piece_index].captured = true;
-                            move_piece_to_dest(piece_index, &mut pieces, &destination);
-                        }
-                    }
-                    // If at the end, gets promoted to queen. Has been moved, so check current position.
-                    if pieces[piece_index].position[0] == 0 || pieces[piece_index].position[0] == 7 {
-                        pieces[piece_index].transform_typ(QUEEN);
-                    }
-                    return true;
-                },
-                ROOK => {
-                    panic!("Not yet implemented.");
-                    // Check that the destination is directly up/down or left/right from rook
-                    if !((pieces[piece_index].position[0] == destination[0] && pieces[piece_index].position[1] != destination[1])
-                        || (pieces[piece_index].position[0] != destination[0] && pieces[piece_index].position[1] == destination[1])) {
-                            // NOT! correctly moving up/down or left/right. 
-                            println!("Can only move rook up/down or left/right");
-                            return false;
-                        }
-                    // Rook cannot jump over pieces. Follow from positions from current piece to destination to detect if there's a piece there its jumping over.
-                    let mut piece_start: usize = 0;
-                    let mut piece_end: usize = 0;
-                    // Moving up
-                    if pieces[piece_index].position[0] == destination[0] && destination[1] < pieces[piece_index].position[1] {
-                        
-                    }
-                },
-                ROOK {
-                    
-                },
-                _ => {
-                    // Won't happen
-                    return false;
-                }
-            }
-            */
         }
     }
     return false;
