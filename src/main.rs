@@ -113,7 +113,7 @@ impl Piece {
             }
             return Some((piece.0 + amount, piece.1 + amount));
         }
-        fn find_all_movements(pieces: &Vec<Piece>, piece: &Piece, all_valid_movements: &mut Vec<(usize, usize)>, straight: bool, diagonal: bool) {
+        fn find_all_movements(pieces: &Vec<Piece>, piece: &Piece, all_valid_movements: &mut Vec<(usize, usize)>, straight: bool, diagonal: bool, max_total_movement_amount: usize) {
             // Populates all_valid_movements with the allowed movements of straight and/or diagonal without passing over pieces
             // can't jump over another piece
             // can capture piece
@@ -127,7 +127,7 @@ impl Piece {
             let mut done_down_right = !diagonal;
             let mut done_up_right = !diagonal;
             let mut done_down_left = !diagonal;
-            for amount in 1..8 {
+            for amount in 1..(max_total_movement_amount + 1) {
                 let maybe_movement_up = move_up(amount, (piece.position[0], piece.position[1]));
                 let maybe_movement_down = move_down(amount, (piece.position[0], piece.position[1]));
                 let maybe_movement_left: Option<(usize, usize)> = move_left(amount, (piece.position[0], piece.position[1]));
@@ -248,7 +248,7 @@ impl Piece {
                 }
             },
             ROOK => {
-                find_all_movements(&pieces, &self, &mut all_valid_movements, true, false);
+                find_all_movements(&pieces, &self, &mut all_valid_movements, true, false, 7);
             }
             KNIGHT => {
                 // up,down,left,right by 2 then right/left by 1
@@ -364,10 +364,14 @@ impl Piece {
             BISHOP => {
                 // can move max 7 diagonal all directions, not over any pieces
                 // very similar to rooks except diagonal instead
-                find_all_movements(&pieces, &self, &mut all_valid_movements, false, true);
+                find_all_movements(&pieces, &self, &mut all_valid_movements, false, true, 7);
             },
             QUEEN => {
-                find_all_movements(&pieces, &self, &mut all_valid_movements, true, true);
+                find_all_movements(&pieces, &self, &mut all_valid_movements, true, true, 7);
+            },
+            KING => {
+                // Any direction, just by one
+                find_all_movements(&pieces, &self, &mut all_valid_movements, true, true, 1);
             },
             _ => {
             },
@@ -421,95 +425,6 @@ fn print_board(pieces: &Vec<Piece>) {
         }
         println!();
     }
-}
-
-fn is_piece_jumping_over_piece(pieces: &Vec<Piece>, piece: &Piece, destination: &Vec<usize>, is_jumping_onto_piece: &mut usize) -> bool {
-    // Tells whether a piece moving from its current location to destination is jumping over another piece.
-    // Returns true if jumping over another piece. 
-    // Returns false if not. If jumping onto another piece, populates is_jumping_onto_piece with index of target piece. 
-
-    let max_0th: usize = max(piece.position[0], destination[0]);
-    let max_1th: usize = max(piece.position[1], destination[1]);
-    let min_0th: usize = min(piece.position[0], destination[0]);
-    let min_1th: usize = min(piece.position[1], destination[1]);
-
-    // Movement must be up/down, left/right, or diagonal
-    if piece.position[0] == destination[0] && piece.position[1] != destination[1] {
-        // Moving left/right
-        let mut positions_to_check: Vec<(usize, usize)> = vec![];
-    } else if piece.position[1] == destination[1] && piece.position[0] == destination[0] {
-        // Moving up/down
-        panic!("Not implemented");
-    } else if (max_0th - min_0th) == (max_1th - min_1th) {
-        // Moving diagonal
-        let mut positions_to_check: Vec<(usize, usize)> = vec![];
-        if piece.position[0] > destination[0] && piece.position[1] > destination[1] {
-            // up/left
-            // 1..5 => 1,2,3,4 => 4,3,2,1
-            // 1..1 => 1 => 1
-            // full example: (2,5) -> (0,0) => (1,4)
-            let mut pos_1 = piece.position[1] - 1;
-            for pos_0 in ((destination[0] + 1)..(piece.position[0] - 1)).rev() {
-                positions_to_check.push((pos_0, pos_1));
-                pos_1 -= 1;
-            }
-        } else if piece.position[0] > destination[0] && piece.position[1] < destination[1] {
-            // up/right
-            // 1..5 => 1,2,3,4 => 4,3,2,1
-            // 1..1 => 1 => 1
-            // full example: (2,1) -> (0,3) => (1,2)
-            let mut pos_1 = piece.position[1] + 1;
-            for pos_0 in ((destination[0] + 1)..(piece.position[0] - 1)).rev() {
-                positions_to_check.push((pos_0, pos_1));
-                pos_1 += 1;
-            }
-        } else if piece.position[0] < destination[0] && piece.position[1] > destination[1] {
-            // down/left
-            // 1..5 => 1,2,3,4 => 4,3,2,1
-            // 1..1 => 1 => 1
-            // full example: (0,3) -> (2,1) => (1,2)
-            let mut pos_1 = piece.position[1] - 1;
-            for pos_0 in (piece.position[0]+1)..destination[0] {
-                positions_to_check.push((pos_0, pos_1));
-                pos_1 -= 1;
-            }
-        } else if piece.position[0] < destination[0] && piece.position[1] < destination[1] {
-            // down/right
-            // 1..5 => 1,2,3,4 => 4,3,2,1
-            // 1..1 => 1 => 1
-            // full example: (0,3) -> (2,5) => (1,4)
-            let mut pos_1 = piece.position[1] + 1;
-            for pos_0 in (piece.position[0]+1)..destination[0] {
-                positions_to_check.push((pos_0, pos_1));
-                pos_1 += 1;
-            }
-        } else {
-            panic!("Got invalid diagonal movement: Piece {:?} Destination {:?}", piece.position, destination);
-        }
-        // end might be smaller than start
-        // pos_1 might be larger than destination[1]
-        for pos in positions_to_check {
-            let next_pos = vec![pos.0, pos.1];
-            let maybe_another_piece = position_to_piece(&pieces, &next_pos);
-            if !maybe_another_piece.is_none() {
-                // Piece there, not good! Jumping over piece
-                return true;
-            }
-        }
-    }
-
-    // Check capturing piece.
-    let maybe_another_piece = position_to_piece(&pieces, &destination);
-    match maybe_another_piece {
-        None => {
-            // Don't populate, not landing on another piece
-        },
-        Some(index) => {
-            // Populate, landing on another piece
-            *is_jumping_onto_piece = index;
-        }
-    }
-    return false;
 }
 
 fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>, turn: Side) -> bool {
