@@ -1,4 +1,4 @@
-use std::{cmp::{max, min}, io::{self, BufRead}, iter::Rev, ops::Range};
+use std::{cmp::{max, min}, collections::HashMap, io::{self, BufRead}, iter::Rev, ops::Range};
 use inline_colorization::*;
 
 const PAWN: &str = "pawn  ";
@@ -396,10 +396,10 @@ fn position_to_piece(pieces: &Vec<Piece>, position: &Vec<usize>) -> Option<usize
 }
 
 fn print_board(pieces: &Vec<Piece>) {
+    let piece_positions = vec![8, 7, 6, 5, 4, 3, 2, 1];
     print!("{style_bold}");
-    println!("   0     1     2     3     4     5     6     7");
     for x in 0..8 {
-        print!("{}  ", x);
+        print!("{:}  ", piece_positions[x]);
         for y in 0..8 {
             let pos: Vec<usize> = vec![x, y];
             if x % 2 == 0 && y % 2 == 0 {
@@ -425,6 +425,7 @@ fn print_board(pieces: &Vec<Piece>) {
         }
         println!();
     }
+    println!("   a     b     c     d     e     f     g     h");
 }
 
 fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destination: Vec<usize>, turn: Side) -> bool {
@@ -481,24 +482,67 @@ fn move_piece(mut pieces: &mut Vec<Piece>, requested_piece: Vec<usize>, destinat
 fn parse_input() -> Option<Vec<usize>> {
     let mut numbers = String::new();
 
+    let mut letters_to_numbers: HashMap<&str, usize> = HashMap::new();
+    letters_to_numbers.insert("a", 0);
+    letters_to_numbers.insert("b", 1);
+    letters_to_numbers.insert("c", 2);
+    letters_to_numbers.insert("d", 3);
+    letters_to_numbers.insert("e", 4);
+    letters_to_numbers.insert("f", 5);
+    letters_to_numbers.insert("g", 6);
+    letters_to_numbers.insert("h", 7);
+
+    letters_to_numbers.insert("1", 7);
+    letters_to_numbers.insert("2", 6);
+    letters_to_numbers.insert("3", 5);
+    letters_to_numbers.insert("4", 4);
+    letters_to_numbers.insert("5", 3);
+    letters_to_numbers.insert("6", 2);
+    letters_to_numbers.insert("7", 1);
+    letters_to_numbers.insert("8", 0);
+
+
     let raw = io::stdin()
         .read_line(&mut numbers)
         .ok();
-    let mut result: Vec<usize> = vec![];
+    let mut result: Vec<usize> = vec![0, 0, 0, 0];
     match raw {
         None => return None,
         Some(_) => {
             let mut iter = numbers.split_whitespace();
-            for _ in 0..4 {
+            for pos in 0..4 {
                 let x = iter.next();
                 match x {
                     None => return None,
                     Some(y) => {
-                        let maybe_usize: Option<usize> = y.parse().ok();
-                        match maybe_usize {
-                            None => return None,
-                            Some(val) => { 
-                                result.push(val);
+                        if pos == 0 || pos == 2 {
+                            // Convert to 0-7
+                            // Must be a letter from bottom
+                            match letters_to_numbers.get(y) {
+                                None => {
+                                    return None;
+                                },
+                                Some(n) => {
+                                    if pos == 0 {
+                                        result[1] = *n;
+                                    } else {
+                                        result[3] = *n;
+                                    }
+                                }
+                            }
+                        } else {
+                            // Must be a number from left side
+                            match letters_to_numbers.get(y) {
+                                None => {
+                                    return None;
+                                },
+                                Some(n) => {
+                                    if pos == 1 {
+                                        result[0] = *n;
+                                    } else {
+                                        result[2] = *n;
+                                    }
+                                }
                             }
                         }
                     }
