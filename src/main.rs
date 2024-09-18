@@ -1,4 +1,4 @@
-use std::{cmp::{max, min}, collections::HashMap, io::{self, BufRead}, iter::Rev, ops::Range};
+use std::{collections::HashMap, io::{self}};
 use inline_colorization::*;
 
 const PAWN: &str = "pawn  ";
