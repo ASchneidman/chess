@@ -160,24 +160,35 @@ fn parse_movement() -> Option<Vec<usize>> {
     return Some(result);
 }
 
-fn parse_fen() -> Vec<piece::Piece> {
+fn parse_fen() -> Option<piece::Game> {
     let mut fen_buf = String::new();
     io::stdin().read_line(&mut fen_buf).ok();
-    return fen::fen_to_board(&fen_buf);
+    if fen_buf == "\n" {
+        return None;
+    }
+    return Some(fen::fen_to_board(&fen_buf));
 }
 
 fn main() {
     println!("Press RETURN to start a fresh game, or enter a FEN notated game to start the game from that state.");
 
-    let mut pieces: Vec<piece::Piece> = parse_fen();
+    let mut pieces = vec![];
+    let mut side = piece::Side::White;
 
-    if pieces.len() == 0 {
-        // Starting a fresh game
-        let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR".into();
-        pieces = fen::fen_to_board(&start_fen);
+    match parse_fen() {
+        None => {
+            let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".into();
+            let game = fen::fen_to_board(&start_fen);
+            pieces = game.pieces;
+            side = game.side;
+        },
+        Some(game) => {
+            pieces = game.pieces;
+            side = game.side;
+        }
     }
 
-    let mut turn = piece::Side::White;
+    let mut turn = side;
     loop {
         println!("{:?} turn.", turn);
         print_board(&pieces);

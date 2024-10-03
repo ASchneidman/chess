@@ -4,8 +4,9 @@ use crate::piece::{self, Piece};
 
 const FEN_SPACE: [char; 8] = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
-pub fn fen_to_board(fen: &String) -> Vec<Piece> {
+pub fn fen_to_board(fen: &String) -> piece::Game {
     let mut board: Vec<Piece> = vec![];
+    let mut side = piece::Side::White;
 
     let mut fen_black_to_index: HashMap<char, usize> = HashMap::new();
     let mut fen_white_to_index: HashMap<char, usize> = HashMap::new();
@@ -80,9 +81,6 @@ pub fn fen_to_board(fen: &String) -> Vec<Piece> {
                     // Move over to the right by int(input)
                     let z = (input.to_string()).parse::<usize>().unwrap();
                     y += z;
-                } else if input == ' ' {
-                    // This means we're done with the pieces
-                    break;
                 } else {
                     panic!("Not valid fen: {}", input);
                 }
@@ -93,7 +91,21 @@ pub fn fen_to_board(fen: &String) -> Vec<Piece> {
         }
     }
 
-    return board;
+    {
+        // Grab the current player
+        if side_encoding == "w" {
+            side = piece::Side::White;
+        } else if side_encoding == "b" {
+            side = piece::Side::Black;
+        } else {
+            panic!("Invalid side");
+        }
+    }
+
+    return piece::Game {
+        pieces: board,
+        side: side,
+    };
 }
 
 pub fn board_to_fen(board: &Vec<Piece>) -> &str {

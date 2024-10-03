@@ -35,6 +35,11 @@ pub struct Piece {
     pub captured: bool,
 }
 
+pub struct Game {
+    pub pieces: Vec<Piece>,
+    pub side: Side,
+}
+
 impl Piece {
     pub fn typ(&self) -> &str {
         return PIECE_NAMES[self.typ_index];
