@@ -1,6 +1,7 @@
 use std::{collections::HashMap, io::{self}};
 use inline_colorization::*;
 mod piece;
+mod fen;
 
 fn print_board(pieces: &Vec<piece::Piece>) {
     let piece_positions = vec![8, 7, 6, 5, 4, 3, 2, 1];
@@ -85,7 +86,7 @@ fn move_piece(mut pieces: &mut Vec<piece::Piece>, requested_piece: (usize, usize
     return false;
 }
 
-fn parse_input() -> Option<Vec<usize>> {
+fn parse_movement() -> Option<Vec<usize>> {
     let mut numbers = String::new();
 
     let mut letters_to_numbers: HashMap<&str, usize> = HashMap::new();
@@ -159,81 +160,39 @@ fn parse_input() -> Option<Vec<usize>> {
     return Some(result);
 }
 
-fn main() {
-    let mut pieces: Vec<piece::Piece> = vec![];
+fn parse_fen() -> Option<piece::Game> {
+    let mut fen_buf = String::new();
+    io::stdin().read_line(&mut fen_buf).ok();
+    if fen_buf == "\n" {
+        return None;
+    }
+    return Some(fen::fen_to_board(&fen_buf));
+}
 
-    for i in 0..8 {
-        // populate pawns
-        if i == 1 || i == 6 {
-            for j in 0..8 {
-                match i {
-                    1 => {
-                        let mut new_piece = piece::Piece {
-                            typ_index: 0,
-                            position: (i, j),
-                            times_moved: 0,
-                            side: piece::Side::Black,
-                            captured: false
-                        };
-                        // Overwrites typ_index
-                        new_piece.transform_typ(piece::PAWN);
-                        pieces.push(new_piece);
-                    },
-                    6 => {
-                        let mut new_piece = piece::Piece {
-                            typ_index: 0,
-                            position: (i, j),
-                            times_moved: 0,
-                            side: piece::Side::White,
-                            captured: false
-                        };
-                        new_piece.transform_typ(piece::PAWN);
-                        pieces.push(new_piece);
-                    },
-                    _ => {
-                        // not gonna happen
-                    }
-                }
-            }
-        }
-        if i == 0 || i == 7 {
-            for piece_typ in [(piece::ROOK, 0), (piece::ROOK, 7), (piece::KNIGHT, 1), (piece::KNIGHT, 6), (piece::BISHOP, 2), (piece::BISHOP, 5), (piece::QUEEN, 3), (piece::KING, 4)] {
-                match i {
-                    0 => {
-                        let mut new_piece = piece::Piece {
-                            typ_index: 0,
-                            position: (i, piece_typ.1),
-                            times_moved: 0,
-                            side: piece::Side::Black,
-                            captured: false   
-                        };
-                        new_piece.transform_typ(piece_typ.0);
-                        pieces.push(new_piece);
-                    },
-                    7 => {
-                        let mut new_piece = piece::Piece {
-                            typ_index: 0,
-                            position: (i, piece_typ.1),
-                            times_moved: 0,
-                            side: piece::Side::White,
-                            captured: false,   
-                        };
-                        new_piece.transform_typ(piece_typ.0);
-                        pieces.push(new_piece);
-                    }
-                    _ => {
-                        // not gonna happen
-                    }
-                }
-            }
+fn main() {
+    println!("Press RETURN to start a fresh game, or enter a FEN notated game to start the game from that state.");
+
+    let mut pieces = vec![];
+    let mut side = piece::Side::White;
+
+    match parse_fen() {
+        None => {
+            let start_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".into();
+            let game = fen::fen_to_board(&start_fen);
+            pieces = game.pieces;
+            side = game.side;
+        },
+        Some(game) => {
+            pieces = game.pieces;
+            side = game.side;
         }
     }
 
-    let mut turn = piece::Side::White;
+    let mut turn = side;
     loop {
         println!("{:?} turn.", turn);
         print_board(&pieces);
-        let maybe_movement = parse_input();
+        let maybe_movement = parse_movement();
         match maybe_movement {
             None => continue,
             Some(movement) => {
