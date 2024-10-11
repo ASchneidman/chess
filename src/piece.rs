@@ -215,8 +215,8 @@ impl Piece {
                     }
                 }
                 {
-                    // If first turn, can move two spots up/down
-                    if self.times_moved == 0 {
+                    // If at start position, can move two spots up/down
+                    if (self.side == Side::Black && self.position.0 == 1) || (self.side == Side::White && self.position.0 == 6) {
                         // First turn!
                         let two_move = if self.side == Side::Black { move_down(2, (self.position.0, self.position.1)) } else { move_up(2, (self.position.0, self.position.1)) };
                         match two_move {
