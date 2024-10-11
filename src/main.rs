@@ -89,73 +89,54 @@ fn move_piece(mut pieces: &mut Vec<piece::Piece>, requested_piece: (usize, usize
 fn parse_movement() -> Option<Vec<usize>> {
     let mut numbers = String::new();
 
-    let mut letters_to_numbers: HashMap<&str, usize> = HashMap::new();
-    letters_to_numbers.insert("a", 0);
-    letters_to_numbers.insert("b", 1);
-    letters_to_numbers.insert("c", 2);
-    letters_to_numbers.insert("d", 3);
-    letters_to_numbers.insert("e", 4);
-    letters_to_numbers.insert("f", 5);
-    letters_to_numbers.insert("g", 6);
-    letters_to_numbers.insert("h", 7);
+    let mut letters_to_numbers: HashMap<char, usize> = HashMap::new();
+    letters_to_numbers.insert('a', 0);
+    letters_to_numbers.insert('b', 1);
+    letters_to_numbers.insert('c', 2);
+    letters_to_numbers.insert('d', 3);
+    letters_to_numbers.insert('e', 4);
+    letters_to_numbers.insert('f', 5);
+    letters_to_numbers.insert('g', 6);
+    letters_to_numbers.insert('h', 7);
 
-    letters_to_numbers.insert("1", 7);
-    letters_to_numbers.insert("2", 6);
-    letters_to_numbers.insert("3", 5);
-    letters_to_numbers.insert("4", 4);
-    letters_to_numbers.insert("5", 3);
-    letters_to_numbers.insert("6", 2);
-    letters_to_numbers.insert("7", 1);
-    letters_to_numbers.insert("8", 0);
+    let mut numbers_to_numbers: HashMap<char, usize> = HashMap::new();
+    numbers_to_numbers.insert('1', 7);
+    numbers_to_numbers.insert('2', 6);
+    numbers_to_numbers.insert('3', 5);
+    numbers_to_numbers.insert('4', 4);
+    numbers_to_numbers.insert('5', 3);
+    numbers_to_numbers.insert('6', 2);
+    numbers_to_numbers.insert('7', 1);
+    numbers_to_numbers.insert('8', 0);
 
 
-    let raw = io::stdin()
-        .read_line(&mut numbers)
-        .ok();
     let mut result: Vec<usize> = vec![0, 0, 0, 0];
-    match raw {
+    match io::stdin().read_line(&mut numbers).ok() {
         None => return None,
         Some(_) => {
-            let mut iter = numbers.split_whitespace();
-            for pos in 0..4 {
-                let x = iter.next();
-                match x {
-                    None => return None,
-                    Some(y) => {
-                        if pos == 0 || pos == 2 {
-                            // Convert to 0-7
-                            // Must be a letter from bottom
-                            match letters_to_numbers.get(y) {
-                                None => {
-                                    return None;
-                                },
-                                Some(n) => {
-                                    if pos == 0 {
-                                        result[1] = *n;
-                                    } else {
-                                        result[3] = *n;
-                                    }
-                                }
-                            }
-                        } else {
-                            // Must be a number from left side
-                            match letters_to_numbers.get(y) {
-                                None => {
-                                    return None;
-                                },
-                                Some(n) => {
-                                    if pos == 1 {
-                                        result[0] = *n;
-                                    } else {
-                                        result[2] = *n;
-                                    }
-                                }
+            for (pos, movement) in numbers.replace('\n', "").split(' ').enumerate() {
+                if movement.len() != 2 {
+                    return None;
+                }
+
+                for (inp_pos, char) in movement.chars().enumerate() {
+                    match if inp_pos == 0 { letters_to_numbers.get(&char) } else { numbers_to_numbers.get(&char) } {
+                        None => return None,
+                        Some(numbered_value) => {
+                            if pos == 0 && inp_pos == 0 {
+                                result[1] = *numbered_value;
+                            } else if pos == 0 && inp_pos == 1 {
+                                result[0] = *numbered_value;
+                            } else if pos == 1 && inp_pos == 0 {
+                                result[3] = *numbered_value;
+                            } else if pos == 1 && inp_pos == 1 {
+                                result[2] = *numbered_value;
                             }
                         }
                     }
                 }
             }
-        },
+        }
     }
     return Some(result);
 }
